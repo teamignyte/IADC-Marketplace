@@ -1,0 +1,34 @@
+{
+  "name": "ignyte",
+  "owner": { "name": "Ignyte Group" },
+  "metadata": { "description": "Ignyte Group's Claude Code plugins." },
+  "plugins": [
+    {
+      "name": "iadc",
+      "source": "./iadc",
+      "description": "The whole IADC suite in one install — advisory architect plus Selenium test generation. Contains no skills itself; installing it pulls in the others."
+    },
+    {
+      "name": "iadc-advisor",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/teamignyte/IADC-Advisor.git",
+        "path": "iadc-advisor"
+      },
+      "description": "Advisory Appian architect: pressure-test tickets against the live app, produce build specs, answer how-does-our-app-work — advise and plan, never build."
+    },
+    {
+      "name": "iadc-tester",
+      "source": {
+        "source": "github",
+        "repo": "teamignyte/IADC-Tester"
+      },
+      "description": "Sync an Appian application's Selenium test suite with a Jira ticket's requirements, scoped by the App Graph."
+    },
+    {
+      "name": "iadc-graph",
+      "source": "./iadc-graph",
+      "description": "Query an Appian application's App Graph over the IADC graph MCP. Installed automatically as a dependency of the advisor and the tester."
+    }
+  ]
+}

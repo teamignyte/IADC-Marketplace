@@ -1,0 +1,7 @@
+{
+  "name": "iadc",
+  "version": "0.1.0",
+  "description": "The whole IADC suite in one install — the advisory architect and the Selenium test generator. Contains no skills of its own; it exists only to pull in the others.",
+  "author": { "name": "Ignyte Group" },
+  "dependencies": ["iadc-advisor", "iadc-tester"]
+}
