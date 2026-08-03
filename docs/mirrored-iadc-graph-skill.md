@@ -12,11 +12,19 @@ are `.claude-plugin/plugin.json`, which makes the directory a plugin, and nothin
 | **Contents** | 7 `.md` files: `SKILL.md` + 6 under `references/` |
 | **Local patches** | **none.** Any difference is staleness — take upstream |
 
-The sha above is carried forward from the Advisor's previous vendored copy, which recorded
-`6dc3999` as the deployed sha on 2026-07-31. **It has not been re-confirmed against the running
-container.** That is safe in the direction that matters: if a graph image has been deployed since,
-this mirror merely lags it, which the ordering rule below permits. Confirm it against the deployed
-image before the first real release.
+`6dc3999` was **verified against the running container**, not assumed. The host has no git, so it
+was proven by content on 2026-07-31: in-container md5sums of `/app/graph_mcp/__main__.py`
+(`98583ce9…`) and `/app/graph_mcp/service.py` (`dd2929ee…`) matched `git show 6dc3999:` for both
+(recorded in IADC-Advisor commit `8069b17`). Reuse that method — comparing file content — whenever
+the deployed sha needs establishing.
+
+The one residual: **a graph image deployed after 2026-07-31 would leave this mirror lagging**, which
+the ordering rule below permits and which is the harmless direction. Re-verify by the same method
+before a release that matters.
+
+For context on what the lag currently costs: at the time of mirroring, IADC-Core `HEAD` was ahead by
+four of the seven files, but documented **the same 18 tools**. The difference is prose refinement, not
+a missing tool — which is precisely the failure the ordering rule guards against.
 
 ---
 
