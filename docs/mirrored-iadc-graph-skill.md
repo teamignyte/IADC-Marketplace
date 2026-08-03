@@ -1,9 +1,10 @@
 # The mirrored `iadc-graph` skill — source sha and how to refresh it
 
-`iadc-graph/` in this repo is a **copy** of the canonical skill in
+`iadc-graph/skills/iadc-graph/` in this repo is a **copy** of the canonical skill in
 [IADC-Core](https://github.com/teamignyte/IADC-Core) (`.claude/skills/iadc-graph/`), taken at the
-sha that built the **deployed** graph image. It carries **zero local patches** — the only additions
-are `.claude-plugin/plugin.json`, which makes the directory a plugin, and nothing else.
+sha that built the **deployed** graph image. It carries **zero local patches** — the only other
+content in the enclosing `iadc-graph/` plugin directory is `.claude-plugin/plugin.json`, which
+makes the directory a plugin, and nothing else.
 
 | | |
 |---|---|
@@ -43,22 +44,23 @@ Refresh is triggered by a graph **deploy**, not by a release schedule.
 
 ## Refreshing
 
-Mechanical. Nothing here may be hand-edited — a fix belongs upstream in IADC-Core, where a
-drift-guard test couples the skill to the server's real tool roster on every commit.
+Mechanical. Nothing in `iadc-graph/skills/iadc-graph/` may be hand-edited — a fix belongs upstream
+in IADC-Core, where a drift-guard test couples the skill to the server's real tool roster on every
+commit.
 
 ```bash
 # from IADC-Core, with <sha> = the sha that built the newly deployed graph image
 git archive <sha> .claude/skills/iadc-graph \
-  | tar -x -C ../IADC-Marketplace/iadc-graph --strip-components=3
+  | tar -x -C ../IADC-Marketplace/iadc-graph/skills --strip-components=2
 ```
 
 Then verify the copy is clean and update the table above:
 
 ```bash
-# byte-identity, ignoring the manifest this repo adds
+# byte-identity — the compared subtree holds only mirrored files, nothing to exclude
 diff -r --exclude=.claude-plugin \
   <(git -C ../IADC-Core show <sha>:.claude/skills/iadc-graph >/dev/null; echo) /dev/null >/dev/null
-diff -r --exclude=.claude-plugin iadc-graph <path-to-IADC-Core-worktree-at-sha>/.claude/skills/iadc-graph
+diff -r iadc-graph/skills/iadc-graph <path-to-IADC-Core-worktree-at-sha>/.claude/skills/iadc-graph
 ```
 
 The second command must print nothing.
