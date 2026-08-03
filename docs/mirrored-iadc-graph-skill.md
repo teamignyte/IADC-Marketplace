@@ -2,16 +2,16 @@
 
 `iadc-graph/skills/iadc-graph/` in this repo is a **copy** of the canonical skill in
 [IADC-Core](https://github.com/teamignyte/IADC-Core) (`.claude/skills/iadc-graph/`), taken at the
-sha that built the **deployed** graph image. It carries **zero local patches** — the only other
-content in the enclosing `iadc-graph/` plugin directory is `.claude-plugin/plugin.json`, which
-makes the directory a plugin, and nothing else.
+sha that built the **deployed** graph image. It carries **zero local patches**. The enclosing
+`iadc-graph/` plugin directory additionally holds `.claude-plugin/plugin.json`, which makes it
+installable.
 
 | | |
 |---|---|
 | **Upstream** | `teamignyte/IADC-Core`, path `.claude/skills/iadc-graph/` — *ours*, not a third party |
 | **Mirrored at** | `6dc3999` (IADC-Core `main`) — taken 2026-08-03 |
-| **Contents** | 7 `.md` files: `SKILL.md` + 6 under `references/` |
-| **Local patches** | **none.** Any difference is staleness — take upstream |
+| **Contents** | `iadc-graph/skills/iadc-graph/` holds 7 `.md` files: `SKILL.md` + 6 under `references/` |
+| **Local patches** | **none in `iadc-graph/skills/iadc-graph/`.** Any difference from upstream there is staleness — take upstream |
 
 `6dc3999` was **verified against the running container**, not assumed. The host has no git, so it
 was proven by content on 2026-07-31: in-container md5sums of `/app/graph_mcp/__main__.py`
@@ -31,8 +31,9 @@ a missing tool — which is precisely the failure the ordering rule guards again
 
 ## The ordering rule — it is release-blocking
 
-**The skill may lag the deployed server, never lead it.** A server tool the skill does not mention
-is harmless. A skill promising a tool the deployed server lacks makes Claude call it and fail.
+**The mirrored skill may lag the deployed server, never lead it.** A server tool the skill does not
+mention is harmless. A skill promising a tool the deployed server lacks makes Claude call it and
+fail.
 
 So: **deploy the graph image first, then refresh this mirror from the sha that built it, then
 publish.** Never refresh from IADC-Core `HEAD` — `HEAD` can be ahead of what is deployed, which is
@@ -58,12 +59,10 @@ Then verify the copy is clean and update the table above:
 
 ```bash
 # byte-identity — the compared subtree holds only mirrored files, nothing to exclude
-diff -r --exclude=.claude-plugin \
-  <(git -C ../IADC-Core show <sha>:.claude/skills/iadc-graph >/dev/null; echo) /dev/null >/dev/null
 diff -r iadc-graph/skills/iadc-graph <path-to-IADC-Core-worktree-at-sha>/.claude/skills/iadc-graph
 ```
 
-The second command must print nothing.
+The command must print nothing.
 
 ## Why a copy at all
 
