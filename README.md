@@ -32,11 +32,8 @@ docs/mirrored-iadc-graph-skill.md  where the mirror came from, and how to refres
 Only two plugins are *stored* here. `iadc-advisor` and `iadc-tester` are fetched from their own
 repositories — the catalog just points at them.
 
-> **`iadc-advisor` is pinned to `ref: iadc-advisor-plugin`, and that is a stopgap.** Its repo's
-> default branch, `main`, is the *pre-plugin* layout — it has `deliverable/` and no
-> `iadc-advisor/` directory — so an unpinned entry fetches nothing and the plugin fails to
-> resolve. The real fix is to merge `iadc-advisor-plugin` into `main`, which is 25 commits of the
-> entire plugin architecture that were never merged. **Drop the `ref` once that lands.**
+No entry is pinned: each tracks its repo's default branch. Pin with `ref` or `sha` only for a
+deliberate reason, and say what it is — an unexplained pin outlives the problem it solved.
 
 **This repo is client-facing.** Adding a marketplace clones the whole repository, so everyone who
 installs anything can read everything here. Family decisions and internal tooling deliberately live
