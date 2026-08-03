@@ -13,7 +13,8 @@
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/teamignyte/IADC-Advisor.git",
-        "path": "iadc-advisor"
+        "path": "iadc-advisor",
+        "ref": "iadc-advisor-plugin"
       },
       "description": "Advisory Appian architect: pressure-test tickets against the live app, produce build specs, answer how-does-our-app-work — advise and plan, never build."
     },
