@@ -186,14 +186,19 @@ none alone is sufficient:**
 - `git check-ignore .mcp.json` succeeds. Catches a step-2 decline on a repo where step 3 found no
   tracked file to react to (so nothing upstream already stopped this run). If it fails, write no
   credential and point back at the missing line.
-- `git show HEAD:.gitignore` (redirecting a missing-file error), checked for the exact line,
-  **succeeds.** This is step 2's own durability requirement, re-checked here rather than trusted from
-  back there — `check-ignore` reads whatever `.gitignore` currently holds in the working tree,
-  committed or not, so it stays green straight through step 2's "they'd rather commit it themselves"
-  decline, which leaves the line only staged, or only in the working tree, and says "write no
-  credential" without anything mechanical behind that sentence. This gate is what actually stands
-  behind it. If it fails, don't write — offer to settle it the way step 2 does (stage and commit just
-  `.gitignore`, only on an explicit yes), and if that's declined too, stop for this run.
+- `git show HEAD:.gitignore` (redirecting a missing-file error), piped through a check for the exact
+  line — `git show HEAD:.gitignore 2>/dev/null | grep -qxF '.mcp.json'` — **exits 0.** The pass
+  condition is that whole pipeline's exit code, not just whether `git show` itself finds a
+  `.gitignore` at HEAD: HEAD can carry a `.gitignore` that never contained this line — committed for
+  some other rule entirely, with `.mcp.json` added only to the working tree afterward — and `git
+  show` alone would still exit 0 there. This is step 2's own durability requirement, re-checked here
+  rather than trusted from back there — `check-ignore` reads whatever `.gitignore` currently holds in
+  the working tree, committed or not, so it stays green straight through step 2's "they'd rather
+  commit it themselves" decline, which leaves the line only staged, or only in the working tree, and
+  says "write no credential" without anything mechanical behind that sentence. This gate is what
+  actually stands behind it. If the pipeline's exit code is nonzero, don't write — offer to settle it
+  the way step 2 does (stage and commit just `.gitignore`, only on an explicit yes), and if that's
+  declined too, stop for this run.
 - `git cat-file -e HEAD:.mcp.json` **fails.** This is the one it's tempting to skip, because step 3
   usually already ensures it — but "usually" is the gap: a *prior*
   run of this same skill that got interrupted between untracking and committing leaves the file out
