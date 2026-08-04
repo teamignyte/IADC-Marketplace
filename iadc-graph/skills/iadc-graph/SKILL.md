@@ -51,27 +51,29 @@ the UUID of the application you intend to seed before resolving it live —
 where it does, read it from there instead; re-resolving it live via the
 Appian MCP (`listApplications`/`getApplication`) at that point is a defect,
 not diligence.** Where no per-project configuration exists, or it doesn't
-cover this application, ask the user for the UUID.
+cover this application, check the environment too — a pipeline run has no
+user to ask, so its value has to come from there, in whatever variable that
+product's own setup skill documents — and only ask the user once neither
+the repo nor the environment holds it.
 
-Per-project configuration follows the family's own two-tier convention
-(`docs/agents/per-project-state.md` in the umbrella repo): a
-`docs/agents/<plugin>.md` file, plus any `docs/agents/<plugin>.local.md`
-override, written by whichever product's own setup skill is installed in
-this project. Read whichever plugin's file is actually present — this skill
-does not own, and does not name, any one of them — covering whatever
-application that project targets. When seeding the IADC application itself,
-the equivalent role is played by this repo's own `CLAUDE.md` (see its Appian
-section).
+Per-project configuration is a `docs/agents/<name>.md` file, plus any
+`docs/agents/<name>.local.md` override, where `<name>` is the short name of
+the IADC plugin you are running under (e.g. `advisor`, `tester`), written by
+that product's own setup skill. List `docs/agents/` if you're unsure which
+one applies; read whichever is actually present, covering whatever
+application the project targets. When seeding the IADC application itself,
+the equivalent role is played by IADC-Core's own `CLAUDE.md` (see its
+Appian section).
 
 Map a developer-given nickname to the UUID through whatever alias the
 per-project configuration provides (e.g. a Nicknames entry). If it provides
 no matching alias, or the recorded UUID is itself still an **unfilled
 angle-bracket placeholder** (e.g. `<application UUID>`) rather than a real
-value, treat it as unresolved: ask the user rather than falling through to a
-live lookup, and never pass the placeholder string to `seed()`. (The Appian
-MCP's name→UUID resolution is for *objects* inside an already-seeded graph —
-see `references/identifiers-and-discovery.md` — a different job from finding
-the application to seed.)
+value, treat it as unresolved: fall through the same order above rather
+than guessing, and never pass the placeholder string to `seed()`. (The
+Appian MCP's name→UUID resolution is for *objects* inside an already-seeded
+graph — see `references/identifiers-and-discovery.md` — a different job
+from finding the application to seed.)
 
 ## MANDATORY first sequence
 
