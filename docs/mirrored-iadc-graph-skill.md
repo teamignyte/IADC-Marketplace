@@ -2,7 +2,8 @@
 
 `iadc-graph/skills/iadc-graph/` in this repo is a **copy** of the canonical skill in
 [IADC-Core](https://github.com/teamignyte/IADC-Core) (`.claude/skills/iadc-graph/`), taken at the
-sha that built the **deployed** graph image. It carries **zero local patches**. The enclosing
+sha that built the **deployed** graph image — or, when the ordering rule below's check establishes
+the deployed server hasn't moved, at `HEAD` directly. It carries **zero local patches**. The enclosing
 `iadc-graph/` plugin directory additionally holds `.claude-plugin/plugin.json`, which makes it
 installable.
 
@@ -24,10 +25,10 @@ against IADC-Core's own deploy log: `.scratch/arch-round3-split/results/27-deplo
 records a successful graph-image deploy (`DEPLOY_EXIT=0`, `graph /health` responding) at `5195a74`,
 dated 2026-08-03 — after `6dc3999`'s 2026-07-31 verification and an ancestor of `b461811`.
 `git log 5195a74..b461811 -- graph_mcp/ api/ evaluator/ graph/ graph_view/ graphify_adapter/
-reader/ resolver/ sail/ .claude/skills/iadc-graph/` in IADC-Core — the full import closure derived
-in the ordering rule below, not just `graph_mcp/` — returns only IV-375's two commits (the same
-result the narrower filter this entry used to cite gave), so nothing this refresh carries documents
-behaviour beyond what `5195a74` actually built and deployed.
+reader/ resolver/ sail/ vendor/graphify/graphify/ .claude/skills/iadc-graph/` in IADC-Core — the
+full filter derived in the ordering rule below, not just `graph_mcp/` — returns only IV-375's two
+commits (the same result the narrower filter this entry used to cite gave), so nothing this refresh
+carries documents behaviour beyond what `5195a74` actually built and deployed.
 
 That "nothing beyond" claim covers more than IV-375's own two lines, because a refresh is a
 wholesale directory copy, not a cherry-pick, so it also carries forward what `6dc3999`'s mirroring
@@ -61,34 +62,37 @@ establishes the deployed server has not moved. The check has three parts; skip a
 turns up a behaviour change, and the default stands: deploy first, refresh from the sha that built
 it, publish.
 
-**1. Get `<deploy-sha>`, and know what it does and doesn't prove.** A successful graph-image deploy
-is recorded as a committed log under `.scratch/<feature>/results/` in IADC-Core — there is no single
-fixed path or filename shape; naming is per-feature, and **most deploy logs name no sha at all** —
-checked across six: four (`.scratch/epic216-arch/results/w2-deploy-dev.log`,
-`.scratch/graph-filters-and-review-resend/results/04-deploy.log`,
-`.scratch/iv320-portal/results/EPIC-deploy.log`,
-`.scratch/arch-round3-split/results/10-deploy-graph-split.log`) carry no sha anywhere in filename or
-content; only two do — `.scratch/arch-round3-split/results/27-deploy-5195a74.log` by filename, and
-`.scratch/epic1-parity/results/10-deploy.log` by a header line
-(`deploy start … — shipping main@b371734`). Take the newest sha-bearing log, across every
-`.scratch/*/results/`, for a deploy that
-built the **graph** image specifically (a portal- or review-only deploy proves nothing about the
-graph server) — and when none names a sha, there is no `<deploy-sha>` to diff commits against, so
-skip straight to content verification below.
+**1. Get `<deploy-sha>`, and know what it does and doesn't prove.** Take the newest deploy log under
+`.scratch/*/results/` in IADC-Core for a deploy that built the **graph** image specifically —
+marked `Image iadc-graph:latest Building` post-split, or `Image iadc:latest Building` for the
+pre-split monolith that served graph too (a portal- or review-only deploy proves nothing about the
+graph server) — and read `<deploy-sha>` from it. Naming is per-feature, not one fixed path or
+filename shape, and **most deploy logs name no sha at all**: checked across six, only two do —
+`.scratch/arch-round3-split/results/27-deploy-5195a74.log` (both by filename and by its own header
+line, `# DEPLOY of main=5195a74`) and `.scratch/epic1-parity/results/10-deploy.log` (a header line
+only, `deploy start … — shipping main@b371734`, no sha in the filename); the other four carry no sha
+anywhere. **When the newest graph-deploy log is one of those four, there is no `<deploy-sha>` to diff
+commits against — go straight to content verification, next paragraph, to get one.**
 
 **A deploy log proves a deploy happened, not what is running now** — a rollback, a hotfix, or a
 redeploy from a different branch after the log was written all break that inference, silently, and
-the log carries no signal that any of them occurred. When that distinction matters — before a
-release that matters, or whenever no log names a sha — don't trust the log alone: re-verify by
-content against the live container instead, the `6dc3999` method above (compare in-container file
-content against `git show <candidate-sha>:<path>`; reach the host through IADC-Core's `iadc-ops`
-skill).
+the log carries no signal that any of them occurred. When that distinction matters — before a release
+that matters, or whenever no log names a sha — don't trust the log alone: pick a **candidate** sha
+(your best guess at what's live — typically the newest commit on `main` you have independent reason
+to believe was deployed) and confirm it by content instead of by log, the `6dc3999` method above
+(compare in-container file content against `git show <candidate-sha>:<path>`; reach the host through
+IADC-Core's `iadc-ops` skill). **Once content-confirmed, that candidate sha IS `<deploy-sha>`** — feed
+it into parts 2 and 3 below. Content verification supplies the sha the commit-by-commit check needs
+when no log does; it does not replace that check.
 
-**2. Check the deployed server's actual import closure, not just `graph_mcp/`.** `graph_mcp/`
-imports first-party `api/`, `graph/`, `graphify_adapter/`, `reader/` and `resolver/` directly; those
-in turn import `evaluator/`, `graph_view/` and `sail/`. Derived, not hand-listed, by walking every
-module- and function-level `import`/`from` statement with `ast` (a deferred import still runs the
-first time its code path executes) — run from IADC-Core's root:
+**2. Check `graph_mcp`'s package closure — a safe superset of the deployed image, not the image
+itself — plus the one dependency that closure can't structurally see.** `graph_mcp/` imports
+first-party `api/`, `graph/`, `graphify_adapter/`, `reader/` and `resolver/` directly; those in turn
+import `evaluator/`, `graph_view/` and `sail/`. Derived, not hand-listed, by walking every module- and
+function-level `import`/`from` statement with `ast` (a deferred import still runs the first time its
+code path executes) — run from IADC-Core's root, and **re-run before every refresh, unconditionally**:
+there's no judgment call to make about whether a package "probably" joined since the run itself is
+cheap (2.4s measured, `time python3 …` this session).
 
 ```bash
 python3 - <<'PY'
@@ -122,19 +126,66 @@ PY
 ```
 
 ```
+IADC-Core b461811, 2026-08-04:
 first-party packages (dir with __init__.py): api, evaluator, graph, graph_mcp, graph_view, graphify_adapter, harness, portal, reader, resolver, sail, tests
 graph_mcp's import closure:               api, evaluator, graph, graph_mcp, graph_view, graphify_adapter, reader, resolver, sail
 excluded (no path into the closure):      harness, portal, tests
 ```
 
-So the check is `git log <deploy-sha>..HEAD -- graph_mcp/ api/ evaluator/ graph/ graph_view/
-graphify_adapter/ reader/ resolver/ sail/ .claude/skills/iadc-graph/`, read every commit it lists,
-don't just count them. `harness/`, `portal/` and `tests/` sit outside the closure and stay out of
-the filter. **This closure is IADC-Core's shape today, not a permanent list.** When a new
-first-party top-level package appears and anything already in the closure starts importing it,
-re-run the command above over the current tree rather than adding a name by hand — a hand-maintained
-list drifts the moment someone adds a package and no one remembers to update this doc; a re-derived
-one doesn't, because it walks the tree instead of trusting memory.
+This is `graph_mcp`'s repo-wide **package** closure, not the deployed image's own closure — a
+narrower, already-**enforced** answer to that exists: `tests/test_image_closure.py`'s
+`test_graph_entrypoint_closure_never_touches_review_only_modules` (:351) and
+`test_graph_stage_chain_provisions_every_non_api_package_it_imports` (:496) probe
+`graph_mcp.service`'s real runtime imports in a fresh subprocess and check them against the
+Dockerfile's actual `COPY` lines, per commit — and that probe proves the graph image excludes
+`evaluator/` (`Dockerfile:158`, review-target-only) and five of `api/`'s thirteen files
+(`contract.py`, `contract_pull.py`, `main.py`, `models.py`, `pipeline.py`; `Dockerfile:152-153`,
+also review-target-only — the `graph` target COPYs only the eight shared files at
+`Dockerfile:128-130`). Consult that test directly for the precise answer;
+this doc's filter deliberately stays at the wider package closure regardless, because
+**over-inclusion here only costs more commits to read, which is safe — the asymmetry that matters is
+under-inclusion.**
+
+Under-inclusion is exactly where the closure above fails, structurally.
+`graphify_adapter/render.py:73` does `from graphify.build import build_from_json` — the vendored
+`vendor/graphify/graphify/` (PyPI `graphifyy`), which `Dockerfile:112` COPYs into both images and
+which `test_graph_stage_chain_provisions_every_non_api_package_it_imports` (:496) checks. **The
+script above cannot see this edge**: `vendor/` has no `__init__.py` at IADC-Core's root, so it's
+never in `FIRST_PARTY`, and the import name (`graphify`) doesn't match the directory name (`vendor`)
+regardless. A manual `grep -rn 'import vendor\|from vendor'` across the closure — the cross-check
+this derivation actually ran — returns nothing and reads as confirmation; it was checking the wrong
+name for a real dependency. **Add `vendor/graphify/graphify/` to the filter by hand** — it is
+vendored *third-party* source, not a first-party package, but a change to it is still a change in
+what the deployed graph server runs, and nothing here derives it automatically.
+
+That this is a real gap, not a theoretical one — the old (narrow) filter passes silently over a
+commit that changes what the deployed graph server actually does, and adding
+`vendor/graphify/graphify/` catches it:
+
+```bash
+$ git log ce0b121^..ce0b121 --oneline -- graph_mcp/ .claude/skills/iadc-graph/
+$ # (nothing — the old filter passes this range silently)
+$ git log ce0b121^..ce0b121 --oneline -- graph_mcp/ .claude/skills/iadc-graph/ vendor/graphify/graphify/
+ce0b121 fix(vendor/graphify): revert the .sail delta now the shim is gone
+```
+
+`ce0b121` reverts a real `.sail`-registration delta in `vendor/graphify/graphify/detect.py` and
+`extract.py` — exactly the class of change this filter exists to catch, and exactly what the narrow
+filter would have missed.
+
+So the check is:
+
+```bash
+git log <deploy-sha>..HEAD -- graph_mcp/ api/ evaluator/ graph/ graph_view/ graphify_adapter/ reader/ resolver/ sail/ vendor/graphify/graphify/ .claude/skills/iadc-graph/
+```
+
+Read every commit it lists, don't just count them. `harness/`, `portal/` and `tests/` sit outside the
+closure and stay out of the filter. **The package-closure part of this list is IADC-Core's shape
+today, not a permanent list** — when a new first-party top-level package appears and anything already
+in the closure starts importing it, the unconditional re-run above picks it up automatically, no hand
+edit needed. `vendor/graphify/graphify/` will **not** be picked up automatically by anything — this
+file is the only place it's recorded — so a future vendored dependency of the same shape needs the
+same by-hand addition and the same kind of note.
 
 **3. Read every listed commit for behaviour, not for file type.** "Touches only
 `.claude/skills/iadc-graph/`" is a claim about *which directory changed*, not about *what the change
@@ -149,10 +200,10 @@ reading the diff can. Read what each listed commit's diff *says*; a behaviour pr
 it, code or prose, is a behaviour commit.
 
 IV-375's refresh (`b461811`) is the worked example: the deploy log at
-`.scratch/arch-round3-split/results/27-deploy-5195a74.log` fixes the deploy sha at `5195a74`
-(filename convention: sha in the name), and the `git log` above, run over the full closure, lists
-only the two prose-only commits this ticket made — neither promises anything the server doesn't
-already do.
+`.scratch/arch-round3-split/results/27-deploy-5195a74.log` fixes the deploy sha at `5195a74` (both by
+filename and by its own header line), and the `git log` above, run over the full filter including
+`vendor/graphify/graphify/`, lists only the two prose-only commits this ticket made. Both were read
+in full: neither promises anything the server doesn't already do.
 
 Refresh is triggered by a graph **deploy**, not by a release schedule.
 
@@ -165,12 +216,16 @@ in IADC-Core, where a drift-guard test couples the skill to the server's real to
 commit.
 
 ```bash
-# from IADC-Core, with <sha> = the sha that built the newly deployed graph image
+# from IADC-Core, with <sha> = the sha that built the newly deployed graph image, OR the sha at
+# HEAD when the ordering rule above's check established the deployed server hasn't moved
 git archive <sha> .claude/skills/iadc-graph \
   | tar -x -C ../IADC-Marketplace/iadc-graph/skills --strip-components=2
 ```
 
-Then verify the copy is clean and update the table above:
+Then verify the copy is clean and update the table above — if `<sha>` came from a permitted `HEAD`
+refresh rather than a deploy, record the deploy-sha the check was run against too (e.g. "taken at
+HEAD, check run against deploy-sha `<X>`"), so a later reader can tell which of the two paths earned
+this pin:
 
 ```bash
 # byte-identity — the compared subtree holds only mirrored files, nothing to exclude
