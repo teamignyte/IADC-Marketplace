@@ -60,12 +60,16 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
         added to `.gitignore` and committed. **Report this and stop — don't add the line yourself and
         don't ask whether to.** This branch exists so a working entry is never re-interrogated;
         offering to fix it here would reopen exactly that.
-      - `git check-ignore .mcp.json` succeeds but `git diff --quiet HEAD -- .gitignore` does not exit
-        0 → whatever rule reaches it right now — exact line or broader pattern alike — is sitting
-        only in the working tree or the index, not HEAD — step 4's reason the second check exists
-        applies here unchanged: this is exactly as revertible as the untracked `.mcp.json` is
-        re-addable. Say the entry works, and that the ignore rule needs one more commit before it's
-        durable. **Report this and stop, same as above** — no commit, no asking.
+      - `git check-ignore .mcp.json` succeeds but step 4's second gate — the same three-part check,
+        run here early — does not: `git check-ignore -v -- .mcp.json 2>/dev/null | grep -q
+        '^\.gitignore:' && git cat-file -e HEAD:.gitignore 2>/dev/null && git diff --quiet HEAD --
+        .gitignore 2>/dev/null`. Something is ignoring it right now, but not durably, and this check
+        can't tell you which of two reasons without looking: the match may not trace to the tracked
+        `.gitignore` at all — `.git/info/exclude` and `core.excludesFile` can make plain
+        `check-ignore` succeed too, and neither one travels with a clone or a coworker — or it may
+        trace to `.gitignore` but not yet the copy at HEAD. Either way this repo does not yet
+        durably protect it. Say the entry works, and that it needs a committed `.gitignore` rule
+        before it's durable. **Report this and stop, same as above** — no commit, no asking.
       - `git check-ignore .mcp.json` succeeds and the durability check above exits 0, but
         `git cat-file -e HEAD:.mcp.json` also succeeds → the ignore rule is real and durable, but HEAD
         still carries a committed blob at this path — the state a prior run of this same skill that got
@@ -100,16 +104,21 @@ point at, whether Appian/LCP itself is reachable) — only that this credential 
 
 ### 2. Establish the ignore rule — before anything is written
 
-Check whether `.gitignore` already covers this path: `git check-ignore --no-index -- .mcp.json`, not
-plain `git check-ignore` — plain `check-ignore` reports "not ignored" for a path that's currently
-tracked (or merely staged) even when a rule that covers it is sitting right there in `.gitignore`
-(`.mcp.json` may still be tracked here; step 3 is what untracks it), so relying on it here risks
-proposing — and appending — a duplicate on a repo that already protects the file, tracked or not.
-`--no-index` answers from the patterns alone, blind to tracked status.
+Check whether `.gitignore` itself — not `.git/info/exclude`, not `core.excludesFile` — already
+carries a rule covering this path. Those other two can make `check-ignore` report "ignored" exactly
+the way a `.gitignore` rule does, but neither one ever leaves this machine, so neither protects a
+clone or a coworker; a rule that lives only there is, for this purpose, exactly as absent as no rule
+at all. `git check-ignore -v --no-index -- .mcp.json 2>/dev/null`, piped through a check that the
+reported source starts with `.gitignore:`. `--no-index`, not plain `check-ignore` — plain
+`check-ignore` reports "not ignored" for a path that's currently tracked (or merely staged) even when
+a rule that covers it is sitting right there in `.gitignore` (`.mcp.json` may still be tracked here;
+step 3 is what untracks it).
 
-- **Succeeds** — some rule already covers it, exact line or broader pattern alike; nothing to append.
-  Continue below to the durability check.
-- **Fails** — no rule covers it yet. Show the user the line and get an explicit yes before adding it:
+- **Source is `.gitignore`** — a rule already covers it there, exact line or broader pattern alike;
+  nothing to append. Continue below to the durability check.
+- **Anything else** — no match at all, or a match sourced from `.git/info/exclude` or
+  `core.excludesFile` — `.gitignore` itself doesn't cover this path, durably or not, no matter what
+  `check-ignore` alone just said. Show the user the line and get an explicit yes before adding it:
 
   ```
   # iadc-graph credential — the iadc MCP entry in .mcp.json, never committed
@@ -121,16 +130,18 @@ proposing — and appending — a duplicate on a repo that already protects the 
   it is, don't add an `iadc` block if there isn't one already, and hand the two values off instead of
   putting them in the file.
 
-**Either way — whether a line was just added or a rule was already covering it — confirm that
-coverage is actually committed, not just present in the working tree or the index:** `git diff
---quiet HEAD -- .gitignore` exits 0. Any diff there — freshly added line or pre-existing rule alike —
-means `.gitignore`'s working-tree content isn't yet what HEAD carries, so what `check-ignore` just
-reported isn't durable: a `git stash`, `git checkout -- .gitignore`, or similar puts it back to
-whatever HEAD holds, which may not cover `.mcp.json` at all, and the next broad `git add` would then
-stage whatever the file holds.
+**Either way — whether a line was just added or `.gitignore` already covered it — confirm that
+coverage is actually committed, not just present in the working tree or the index:** `git cat-file -e
+HEAD:.gitignore 2>/dev/null && git diff --quiet HEAD -- .gitignore 2>/dev/null`. The first half
+catches a `.gitignore` that exists only in the working tree — brand new, or just added this run —
+where the second half alone would read clean by default: a diff against a HEAD that has no such file
+to differ from reports no difference, which is not the same thing as "durable." The second half
+catches one that exists at HEAD too but disagrees with the working tree. Either failing means a `git
+stash`, `git checkout -- .gitignore`, or similar puts it back to whatever HEAD holds, which may not
+cover `.mcp.json` at all, and the next broad `git add` would then stage whatever the file holds.
 
-- **Exits 0 (clean)** — continue to step 3.
-- **Exits non-zero (dirty)** — stage and commit just that file: `git add .gitignore`, then `git
+- **Both succeed** — continue to step 3.
+- **Either fails** — stage and commit just that file: `git add .gitignore`, then `git
   commit -m "Ignore .mcp.json — iadc-graph:setup" -- .gitignore` (this sequence is safe whether
   `.gitignore` already existed or is brand new, and never touches any other file's staged state,
   since it only ever adds and commits that one path). Show the pending change first, run only on an
@@ -194,11 +205,12 @@ Once `.mcp.json` is confirmed untracked — either branch above, or step 3 was n
 was untracked already — one gate remains: `git check-ignore .mcp.json`.
 
 - **Succeeds** — continue to step 4.
-- **Fails** — step 2's line either isn't there or isn't committed yet. Offer to settle step 2 now
-  (this is the first ask since the file became untracked, not a re-nag of an earlier decline): on
-  yes, go run step 2's whole sequence — append if missing, then confirm it's committed — and once
-  that succeeds, come back here and treat this gate as passed; the destination is step 4, nothing
-  vaguer than that. On a second decline: stop, write no credential, say what's still needed.
+- **Fails** — step 2's rule either isn't there, isn't sourced from `.gitignore`, or isn't committed
+  yet. Offer to settle step 2 now (this is the first ask since the file became untracked, not a
+  re-nag of an earlier decline): on yes, go run step 2's whole sequence — append if missing, then
+  confirm it's committed — and once that succeeds, come back here and treat this gate as passed; the
+  destination is step 4, nothing vaguer than that. On a second decline: stop, write no credential,
+  say what's still needed.
 
 ### 4. Collect the values and write
 
@@ -217,19 +229,31 @@ First, the file itself has to be usable. `.mcp.json` at the repo root:
 **Three gates, all required, right before anything literal goes in — they test different things and
 none alone is sufficient:**
 
-- `git check-ignore .mcp.json` succeeds. Catches a step-2 decline on a repo where step 3 found no
+- `git check-ignore .mcp.json` succeeds. Bare here, unlike step 2's `--no-index` — by this point
+  step 3 has already confirmed `.mcp.json` untracked, so the tracked-file blind spot `--no-index`
+  guards against there cannot apply here. Catches a step-2 decline on a repo where step 3 found no
   tracked file to react to (so nothing upstream already stopped this run). If it fails, write no
-  credential and point back at the missing line.
-- `git diff --quiet HEAD -- .gitignore` **exits 0.** This is step 2's own durability requirement,
-  re-checked here rather than trusted from back there — `check-ignore` reads whatever `.gitignore`
-  currently holds in the working tree, committed or not, so it stays green straight through step 2's
-  "they'd rather commit it themselves" decline, which leaves the covering rule only staged, or only
-  in the working tree, and says "write no credential" without anything mechanical behind that
-  sentence. This gate is what actually stands behind it: HEAD can carry a `.gitignore` that already
-  covers this path — the exact line, or a broader pattern like `*.json` or `/.mcp.json` — and a clean
-  diff against HEAD confirms gate 1's pass holds there too, not only in the working copy. If the diff
-  is nonzero, don't write — offer to settle it the way step 2 does (stage and commit just
-  `.gitignore`, only on an explicit yes), and if that's declined too, stop for this run.
+  credential and point back at the missing rule.
+- **All three of the following hold.** Gate 1 only answers "is it ignored right now," which
+  `.git/info/exclude` and `core.excludesFile` can satisfy exactly as well as `.gitignore` can, and
+  neither of those two ever leaves this machine's `.git` directory or this user's global config; this
+  gate answers the question that actually matters before a credential gets written — would a fresh
+  clone of this repo ignore it too:
+  - `git check-ignore -v -- .mcp.json 2>/dev/null | grep -q '^\.gitignore:'` — the match traces to
+    the tracked `.gitignore`, not `.git/info/exclude` or `core.excludesFile`.
+  - `git cat-file -e HEAD:.gitignore 2>/dev/null` — that file exists at HEAD, not only on disk right
+    now. Without this, a brand-new or freshly-created `.gitignore` that's never been `git add`ed
+    passes the next check vacuously: a diff against a HEAD that has no such file to differ from
+    reports no difference.
+  - `git diff --quiet HEAD -- .gitignore 2>/dev/null` — and the copy at HEAD is the one gate 1 just
+    read from, not a working-tree or staged edit HEAD doesn't carry yet.
+
+  This is step 2's own two checks, combined into one here because step 4 can't assume step 2 already
+  ran in this session — a repo can pass step 2 and lose the protection again before step 4 runs (a
+  `git stash`, a `git checkout -- .gitignore`, another commit landing in between), and this
+  three-part check is what actually stands behind "write no credential" rather than that sentence
+  alone. If any part fails, don't write — offer to settle it the way step 2 does (stage and commit
+  just `.gitignore`, only on an explicit yes), and if that's declined too, stop for this run.
 - `git cat-file -e HEAD:.mcp.json` **fails.** This is the one it's tempting to skip, because step 3
   usually already ensures it — but "usually" is the gap: a *prior*
   run of this same skill that got interrupted between untracking and committing leaves the file out
