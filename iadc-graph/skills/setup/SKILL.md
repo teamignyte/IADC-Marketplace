@@ -61,15 +61,18 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
         don't ask whether to.** This branch exists so a working entry is never re-interrogated;
         offering to fix it here would reopen exactly that.
       - `git check-ignore .mcp.json` succeeds but step 4's second gate — the same three-part check,
-        run here early — does not: `git check-ignore -v -- .mcp.json 2>/dev/null | grep -q
-        '^\.gitignore:' && git cat-file -e HEAD:.gitignore 2>/dev/null && git diff --quiet HEAD --
-        .gitignore 2>/dev/null`. Something is ignoring it right now, but not durably, and this check
-        can't tell you which of two reasons without looking: the match may not trace to the tracked
-        `.gitignore` at all — `.git/info/exclude` and `core.excludesFile` can make plain
-        `check-ignore` succeed too, and neither one travels with a clone or a coworker — or it may
-        trace to `.gitignore` but not yet the copy at HEAD. Either way this repo does not yet
-        durably protect it. Say the entry works, and that it needs a committed `.gitignore` rule
-        before it's durable. **Report this and stop, same as above** — no commit, no asking.
+        run here early — does not: `git check-ignore -- .mcp.json 2>/dev/null && git check-ignore -v
+        -- .mcp.json 2>/dev/null | grep -q '^\.gitignore:' && git cat-file -e HEAD:.gitignore
+        2>/dev/null && git diff --quiet HEAD -- .gitignore 2>/dev/null`. Something is ignoring it
+        right now, but not durably, and this check can't tell you which of three reasons without
+        looking: the match may not trace to the tracked `.gitignore` at all — `.git/info/exclude`
+        and `core.excludesFile` can make plain `check-ignore` succeed too, and neither one travels
+        with a clone or a coworker; a rule that traces to `.gitignore` may be a later line negating
+        it back out (`-v` alone still reports that line as a source and exits 0, which is why the
+        plain, non-`-v` exit code has to agree first); or it may trace to a real, non-negated
+        `.gitignore` rule but not yet the copy at HEAD. Either way this repo does not yet durably
+        protect it. Say the entry works, and that it needs a committed, non-negated `.gitignore`
+        rule before it's durable. **Report this and stop, same as above** — no commit, no asking.
       - `git check-ignore .mcp.json` succeeds and the durability check above exits 0, but
         `git cat-file -e HEAD:.mcp.json` also succeeds → the ignore rule is real and durable, but HEAD
         still carries a committed blob at this path — the state a prior run of this same skill that got
@@ -105,19 +108,25 @@ point at, whether Appian/LCP itself is reachable) — only that this credential 
 ### 2. Establish the ignore rule — before anything is written
 
 Check whether `.gitignore` itself — not `.git/info/exclude`, not `core.excludesFile` — already
-carries a rule covering this path. Those other two can make `check-ignore` report "ignored" exactly
-the way a `.gitignore` rule does, but neither one ever leaves this machine, so neither protects a
-clone or a coworker; a rule that lives only there is, for this purpose, exactly as absent as no rule
-at all. `git check-ignore -v --no-index -- .mcp.json 2>/dev/null`, piped through a check that the
-reported source starts with `.gitignore:`. `--no-index`, not plain `check-ignore` — plain
-`check-ignore` reports "not ignored" for a path that's currently tracked (or merely staged) even when
-a rule that covers it is sitting right there in `.gitignore` (`.mcp.json` may still be tracked here;
-step 3 is what untracks it).
+carries a rule that actually covers this path. Those other two can make `check-ignore` report
+"ignored" exactly the way a `.gitignore` rule does, but neither one ever leaves this machine, so
+neither protects a clone or a coworker; a rule that lives only there is, for this purpose, exactly as
+absent as no rule at all. `git check-ignore --no-index -- .mcp.json 2>/dev/null && git check-ignore
+-v --no-index -- .mcp.json 2>/dev/null`, piped through a check that the reported source starts with
+`.gitignore:`. Both halves matter: `-v` alone exits 0 and reports a source even for a rule a *later*
+line in the same file negates back out (`*.json` then `!.mcp.json` is genuinely not ignored, but
+`-v` still prints `.gitignore:2:!.mcp.json`), so the plain, non-`-v` exit code is what confirms the
+path is actually ignored before the source-pin asks by what. `--no-index` on both halves, not plain
+`check-ignore` — plain `check-ignore` reports "not ignored" for a path that's currently tracked (or
+merely staged) even when a rule that covers it is sitting right there in `.gitignore` (`.mcp.json`
+may still be tracked here; step 3 is what untracks it); leaving `--no-index` off either half
+reintroduces that same blind spot for that half.
 
-- **Source is `.gitignore`** — a rule already covers it there, exact line or broader pattern alike;
-  nothing to append. Continue below to the durability check.
-- **Anything else** — no match at all, or a match sourced from `.git/info/exclude` or
-  `core.excludesFile` — `.gitignore` itself doesn't cover this path, durably or not, no matter what
+- **Both succeed, and the source is `.gitignore`** — a rule already covers it there, exact line or
+  broader pattern alike; nothing to append. Continue below to the durability check.
+- **Anything else** — not ignored at all, ignored but negated back out by a later `.gitignore` line,
+  or ignored only via a match sourced from `.git/info/exclude` or `core.excludesFile` — `.gitignore`
+  itself doesn't actually cover this path, durably or not, no matter what
   `check-ignore` alone just said. Show the user the line and get an explicit yes before adding it:
 
   ```
@@ -239,8 +248,11 @@ none alone is sufficient:**
   neither of those two ever leaves this machine's `.git` directory or this user's global config; this
   gate answers the question that actually matters before a credential gets written — would a fresh
   clone of this repo ignore it too:
-  - `git check-ignore -v -- .mcp.json 2>/dev/null | grep -q '^\.gitignore:'` — the match traces to
-    the tracked `.gitignore`, not `.git/info/exclude` or `core.excludesFile`.
+  - `git check-ignore -- .mcp.json 2>/dev/null && git check-ignore -v -- .mcp.json 2>/dev/null |
+    grep -q '^\.gitignore:'` — the path is actually ignored, not just matched by a rule a later
+    line negates back out (`-v` alone reports a source and exits 0 even then — gate 1 already
+    covers the plain half, but this part can't lean on that and stay correct on its own), **and**
+    the match traces to the tracked `.gitignore`, not `.git/info/exclude` or `core.excludesFile`.
   - `git cat-file -e HEAD:.gitignore 2>/dev/null` — that file exists at HEAD, not only on disk right
     now. Without this, a brand-new or freshly-created `.gitignore` that's never been `git add`ed
     passes the next check vacuously: a diff against a HEAD that has no such file to differ from
