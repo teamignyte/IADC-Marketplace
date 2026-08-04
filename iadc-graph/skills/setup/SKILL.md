@@ -64,18 +64,20 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
         run here early — does not: `git check-ignore -- .mcp.json 2>/dev/null && git check-ignore -v
         -- .mcp.json 2>/dev/null | grep -q '^\.gitignore:' && git cat-file -e HEAD:.gitignore
         2>/dev/null && git diff --quiet HEAD -- .gitignore 2>/dev/null && git ls-files -v .gitignore
-        | grep -q '^H '`. Something is ignoring it right now, but not durably, and this check can't
-        tell you which of four reasons without looking: the match may not trace to the tracked
-        `.gitignore` at all — `.git/info/exclude` and `core.excludesFile` can make plain
+        2>/dev/null | grep -q '^H '`. Something is ignoring it right now, but not durably, and this
+        check can't tell you which of four reasons without looking: the match may not trace to the
+        tracked `.gitignore` at all — `.git/info/exclude` and `core.excludesFile` can make plain
         `check-ignore` succeed too, and neither one travels with a clone or a coworker; a rule that
         traces to `.gitignore` may be a later line negating it back out (`-v` alone still reports
         that line as a source and exits 0, which is why the plain, non-`-v` exit code has to agree
         first); it may trace to a real, non-negated `.gitignore` rule but not yet the copy at HEAD;
-        or the committed rule may be real, current, and non-negated, but `.gitignore` itself is
-        flagged `--skip-worktree` or `--assume-unchanged`, which stops git from comparing it to the
-        working tree at all — the working copy could carry a rule the committed one lacks and the
-        diff check just above would never see it (`git ls-files -v .gitignore` reporting anything
-        other than `H` is what catches that). Either way this repo does not yet durably protect it.
+        or `.gitignore` itself may be flagged `--skip-worktree` or `--assume-unchanged`, which stops
+        git from comparing it to the working tree at all — whether the committed rule is real,
+        current, and non-negated is exactly what that flag makes unknowable, not something this
+        check can assume in its favor: the working copy could carry a rule the committed one lacks
+        (or lack one the committed copy carries) and the diff check just above would never see either
+        divergence (`git ls-files -v .gitignore` reporting anything other than `H` is what catches
+        that). Either way this repo does not yet durably protect it.
         Say the entry works, and that it needs a committed, non-negated `.gitignore` rule, actually
         compared against the working tree, before it's durable. **Report this and stop, same as
         above** — no commit, no asking.
@@ -148,7 +150,7 @@ reintroduces that same blind spot for that half.
 **Either way — whether a line was just added or `.gitignore` already covered it — confirm that
 coverage is actually committed, not just present in the working tree or the index, and that git can
 actually see it there:** `git cat-file -e HEAD:.gitignore 2>/dev/null && git diff --quiet HEAD --
-.gitignore 2>/dev/null && git ls-files -v .gitignore | grep -q '^H '`. The first part catches a
+.gitignore 2>/dev/null && git ls-files -v .gitignore 2>/dev/null | grep -q '^H '`. The first part catches a
 `.gitignore` that exists only in the working tree — brand new, or just added this run — where the
 second part alone would read clean by default: a diff against a HEAD that has no such file to
 differ from reports no difference, which is not the same thing as "durable." The second part catches
@@ -163,12 +165,18 @@ an earlier session, or similar, could leave this file not actually covering `.mc
 it in a way git itself cannot currently verify.
 
 - **All three succeed** — continue to step 3.
-- **The first two succeed but the third fails** — the rule is real, committed, and current, but
-  `.gitignore` itself is flagged. Tell the user plainly and offer `git update-index
-  --no-skip-worktree .gitignore` (or `--no-assume-unchanged`, matching whichever flag `ls-files -v`
-  reported), run only on an explicit yes, then re-run this check. Either flag exists specifically to
-  hide a personal working-tree edit from git, so clearing it may surface an edit the user meant to
-  keep local — say so before running it.
+- **The first two succeed but the third fails** — `.gitignore` itself is flagged `--skip-worktree`
+  or `--assume-unchanged`, and that flag is exactly what makes "is the rule real, committed, and
+  current" unanswerable: the first two parts reporting clean here proves nothing, because the flag
+  is what stops git from ever reporting anything else for this file. Tell the user plainly that this
+  repo does not yet durably protect the credential, and that this check cannot say whether it ever
+  did. Offer `git update-index --no-skip-worktree .gitignore` (or `--no-assume-unchanged`, matching
+  whichever flag `ls-files -v` reported), run only on an explicit yes, then re-run this check —
+  clearing the flag doesn't establish coverage by itself, it only lets the check run truthfully
+  again. Either flag exists specifically to hide a personal working-tree edit from git, so clearing
+  it may surface an edit the user meant to keep local — say so before running it.
+  - **Decline** — write no credential this run either, for the same not-yet-durable reason. Name
+    the values still needed.
 - **Either of the first two fails** — stage and commit just that file: `git add .gitignore`, then
   `git commit -m "Ignore .mcp.json — iadc-graph:setup" -- .gitignore` (this sequence is safe whether
   `.gitignore` already existed or is brand new, and never touches any other file's staged state,
@@ -278,9 +286,9 @@ none alone is sufficient:**
     reports no difference.
   - `git diff --quiet HEAD -- .gitignore 2>/dev/null` — and the copy at HEAD is the one gate 1 just
     read from, not a working-tree or staged edit HEAD doesn't carry yet.
-  - `git ls-files -v .gitignore | grep -q '^H '` — and git is actually comparing that committed copy
-    to the working tree, not skipping the comparison entirely. `git update-index --skip-worktree
-    .gitignore` or `--assume-unchanged .gitignore` — the standard idiom for keeping a personal
+  - `git ls-files -v .gitignore 2>/dev/null | grep -q '^H '` — and git is actually comparing that
+    committed copy to the working tree, not skipping the comparison entirely. `git update-index
+    --skip-worktree .gitignore` or `--assume-unchanged .gitignore` — the standard idiom for keeping a personal
     ignore line out of a shared file — makes git treat HEAD's copy as authoritative and stop looking
     at the working tree for this one file, so the bullet above reports **no** difference even when
     the working copy carries a `.mcp.json` rule the committed copy at HEAD lacks. `ls-files -v` is
