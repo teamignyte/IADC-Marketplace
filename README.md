@@ -26,6 +26,7 @@ whichever you install, and disabling it while either is enabled is refused.
 .claude-plugin/marketplace.json    the catalog
 iadc/                              the bundle — a manifest and nothing else
 iadc-graph/skills/iadc-graph/      the mirrored graph skill (SKILL.md + references/)
+iadc-graph/skills/setup/           the hand-written setup skill — writes the iadc MCP entry
 docs/mirrored-iadc-graph-skill.md  where the mirror came from, and how to refresh it
 ```
 
@@ -46,8 +47,9 @@ in the [umbrella](https://github.com/teamignyte/IADC) instead, which nobody clon
 the **deployed** graph image — never at `HEAD`, which can be ahead of what is running. A skill that
 promises a tool the deployed server lacks makes Claude call it and fail.
 
-Never hand-edit it. Fix it upstream in IADC-Core, where a drift-guard test binds it to the server's
-real tool roster per commit, deploy, then refresh. Procedure and current sha:
+Never hand-edit `iadc-graph/skills/iadc-graph/`. Fix it upstream in IADC-Core, where a drift-guard
+test binds it to the server's real tool roster per commit, deploy, then refresh. Procedure and
+current sha:
 [`docs/mirrored-iadc-graph-skill.md`](docs/mirrored-iadc-graph-skill.md).
 
 ## Adding a plugin
