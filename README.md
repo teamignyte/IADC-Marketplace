@@ -44,8 +44,10 @@ in the [umbrella](https://github.com/teamignyte/IADC) instead, which nobody clon
 ## The graph mirror
 
 `iadc-graph/skills/iadc-graph/` is a copy of IADC-Core's canonical skill, taken at the sha that built
-the **deployed** graph image — never at `HEAD`, which can be ahead of what is running. A skill that
-promises a tool the deployed server lacks makes Claude call it and fail.
+the **deployed** graph image. Refreshing straight from `HEAD` (which can be ahead of what is
+running) is permitted only when a check — documented in the procedure link below — establishes the
+deployed server hasn't moved; the default is deploy first, then refresh from the sha that built it.
+A skill that promises a tool the deployed server lacks makes Claude call it and fail.
 
 Never hand-edit `iadc-graph/skills/iadc-graph/`. Fix it upstream in IADC-Core, where a drift-guard
 test binds it to the server's real tool roster per commit, deploy, then refresh. Procedure and
