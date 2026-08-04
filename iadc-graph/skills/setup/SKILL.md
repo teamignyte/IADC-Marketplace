@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Configure the iadc-graph plugin's MCP connection for this repo — collect the graph URL and API key, write the `iadc` entry into `.mcp.json` (merging, never overwriting, preserving every other server), and run the git-safety sequence a credential needs before any value is written. Designed as the one place in the family that writes this entry, so other IADC plugins can point here instead of carrying their own copy. Skips itself when a working entry already exists. Works with neither other IADC plugin installed. Run once per repo, before the graph is needed.
+description: Configure the iadc-graph plugin's MCP connection for this repo — collect the graph URL and API key, write the `iadc` entry into `.mcp.json` (merging, never overwriting, preserving every other server), and run the git-safety sequence a credential needs before any value is written. Designed as the one place in the family that writes this entry, so other IADC plugins can point here instead of carrying their own copy. Skips itself when a working entry already exists and is protected — a tracked file still gets the full safety sequence, and a working-but-unprotected one gets flagged rather than waved through. Works with neither other IADC plugin installed. Run once per repo, before the graph is needed.
 disable-model-invocation: true
 ---
 
@@ -46,8 +46,29 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
     standing and check again after restarting? On "leave it," stop without writing anything.
   - **Present** → before calling this "working," check `git ls-files --error-unmatch .mcp.json`
     (repo root) — a connection succeeding is not the same question as a credential being safe:
-    - **Untracked** → genuinely working. Say so — name the `url`, redact the key — and stop. Nothing
-      else in this skill needs to run.
+    - **Untracked** → not being in the index only means nothing has staged it — it says nothing about
+      whether the next broad `git add -A` would leave it alone, and this branch has never asked that
+      before reporting success. Settle it with the same two checks step 4 runs right before it writes
+      anything — a credential already sitting in the file deserves the same durable protection as one
+      about to be written, and neither check alone is sufficient:
+      - `git check-ignore .mcp.json` **fails** → nothing in `.gitignore` reaches this file yet. Say
+        the entry works, but say just as plainly that this repo does not protect it, and name the fix
+        outright:
+        ```
+        # iadc-graph credential — the iadc MCP entry in .mcp.json, never committed
+        .mcp.json
+        ```
+        added to `.gitignore` and committed. **Report this and stop — don't add the line yourself and
+        don't ask whether to.** This branch exists so a working entry is never re-interrogated;
+        offering to fix it here would reopen exactly that.
+      - `git check-ignore .mcp.json` succeeds but
+        `git show HEAD:.gitignore 2>/dev/null | grep -qxF '.mcp.json'` does not exit 0 → the line is
+        reaching it right now, but only from the working tree or the index — step 4's reason the
+        second check exists applies here unchanged: this is exactly as revertible as the untracked
+        `.mcp.json` is re-addable. Say the entry works, and that the ignore rule needs one more commit
+        before it's durable. **Report this and stop, same as above** — no commit, no asking.
+      - **Both succeed** → genuinely working **and** protected. Say so — name the `url`, redact the
+        key — and stop. Nothing else in this skill needs to run.
     - **Tracked** → **don't report this as working.** The key is committed into this repo's git
       history, and untracking the file later doesn't erase that — anyone with the repo's history can
       still read the old commit. Say so, then continue to step 2 exactly as the unconfigured case
