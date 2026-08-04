@@ -170,7 +170,8 @@ was untracked already — one gate remains: `git check-ignore .mcp.json`.
 
 First, the file itself has to be usable. `.mcp.json` at the repo root:
 
-- **Doesn't exist** — fine, there's nothing to merge into; skip to writing, below.
+- **Doesn't exist** — fine, there's nothing to merge into; the other two triage bullets below don't
+  apply, so move on to the gates that follow this list — not straight to writing.
 - **Exists, parses as JSON, and `mcpServers` is an object, or is simply absent** — usable; continue.
   An absent `mcpServers` isn't a problem to solve, just a key to create holding `iadc` alone.
 - **Exists but doesn't parse, or parses to something where `mcpServers` isn't an object** — **stop.
@@ -179,14 +180,22 @@ First, the file itself has to be usable. `.mcp.json` at the repo root:
   you can rebuild it with their explicit confirmation before anything is written. Guessing a repair
   risks silently discarding whatever they had reason to put there.
 
-**Two gates, both required, right before anything literal goes in — they test different things and
-neither alone is sufficient:**
+**Three gates, all required, right before anything literal goes in — they test different things and
+none alone is sufficient:**
 
 - `git check-ignore .mcp.json` succeeds. Catches a step-2 decline on a repo where step 3 found no
   tracked file to react to (so nothing upstream already stopped this run). If it fails, write no
   credential and point back at the missing line.
-- `git cat-file -e HEAD:.mcp.json` **fails.** This is the one that actually matters and the one it's
-  tempting to skip, because step 3 usually already ensures it — but "usually" is the gap: a *prior*
+- `git show HEAD:.gitignore` (redirecting a missing-file error), checked for the exact line,
+  **succeeds.** This is step 2's own durability requirement, re-checked here rather than trusted from
+  back there — `check-ignore` reads whatever `.gitignore` currently holds in the working tree,
+  committed or not, so it stays green straight through step 2's "they'd rather commit it themselves"
+  decline, which leaves the line only staged, or only in the working tree, and says "write no
+  credential" without anything mechanical behind that sentence. This gate is what actually stands
+  behind it. If it fails, don't write — offer to settle it the way step 2 does (stage and commit just
+  `.gitignore`, only on an explicit yes), and if that's declined too, stop for this run.
+- `git cat-file -e HEAD:.mcp.json` **fails.** This is the one it's tempting to skip, because step 3
+  usually already ensures it — but "usually" is the gap: a *prior*
   run of this same skill that got interrupted between untracking and committing leaves the file out
   of the index already, so step 3's own opening check (`ls-files`) sees nothing to react to and falls
   straight through here, while HEAD still carries the file. If this gate fails, don't write — say so,
