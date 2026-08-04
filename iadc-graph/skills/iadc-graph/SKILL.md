@@ -46,25 +46,26 @@ Each file covers what the tool schemas can't say. Load on demand:
 
 ## Getting the seed target
 
-**Check whether the Project configuration already records the UUID of the
-application you intend to seed before resolving it live — where it does,
-read it from there instead; re-resolving it live via the Appian MCP
-(`listApplications`/`getApplication`) at that point is a defect, not
-diligence.** Where no Project configuration exists, or it doesn't cover this
-application, resolve the UUID the ordinary way instead: ask the user, or
-look it up via the Appian MCP (`listApplications`/`getApplication`) directly.
+**Check whether the project's own per-project configuration already records
+the UUID of the application you intend to seed before resolving it live —
+where it does, read it from there instead; re-resolving it live via the
+Appian MCP (`listApplications`/`getApplication`) at that point is a defect,
+not diligence.** Where no per-project configuration exists, or it doesn't
+cover this application, ask the user for the UUID.
 
-The Project configuration is the IADC repo's own `CLAUDE.md` (see its Appian
-section) when seeding the IADC application itself. For a client project,
-it's whatever file plays that role there — e.g. one injected at session
-start from `docs/agents/advisor.md`, written by that product's own setup
-skill, with any `docs/agents/advisor.local.md` personal overrides applied on
-top (IADC-Advisor ADR 0010) — covering whatever application that project
-targets.
+Per-project configuration follows the family's own two-tier convention
+(`docs/agents/per-project-state.md` in the umbrella repo): a
+`docs/agents/<plugin>.md` file, plus any `docs/agents/<plugin>.local.md`
+override, written by whichever product's own setup skill is installed in
+this project. Read whichever plugin's file is actually present — this skill
+does not own, and does not name, any one of them — covering whatever
+application that project targets. When seeding the IADC application itself,
+the equivalent role is played by this repo's own `CLAUDE.md` (see its Appian
+section).
 
 Map a developer-given nickname to the UUID through whatever alias the
-Project configuration provides (e.g. a Nicknames entry). If it provides no
-matching alias, or the recorded UUID is itself still an **unfilled
+per-project configuration provides (e.g. a Nicknames entry). If it provides
+no matching alias, or the recorded UUID is itself still an **unfilled
 angle-bracket placeholder** (e.g. `<application UUID>`) rather than a real
 value, treat it as unresolved: ask the user rather than falling through to a
 live lookup, and never pass the placeholder string to `seed()`. (The Appian

@@ -10,25 +10,34 @@ installable.
 | | |
 |---|---|
 | **Upstream** | `teamignyte/IADC-Core`, path `.claude/skills/iadc-graph/` — *ours*, not a third party |
-| **Mirrored at** | `b461811` (IADC-Core `iv-356-per-project-config-parity`, not yet on `main`) — taken 2026-08-04 |
+| **Mirrored at** | `1f85211` (IADC-Core `iv-356-per-project-config-parity`, not yet on `main`) — taken 2026-08-04 |
 | **Contents** | `iadc-graph/skills/iadc-graph/` holds 7 `.md` files: `SKILL.md` + 6 under `references/` |
 | **Local patches** | **none in `iadc-graph/skills/iadc-graph/`.** Any difference from upstream there is staleness — take upstream |
 
-**This row owes a re-record.** `b461811` lives on an unpushed feature branch — unresolvable from
-any other clone, and dead if that branch is rebased or squashed when IV-375 merges. Re-record this
-row at the post-merge `main` sha once it lands; until then, treat this pin as provisional.
+**This row owes a re-record — a merge prerequisite of `iv-356-per-project-config-parity`, not of
+any one ticket on it.** `1f85211` lives on that same unpushed feature branch — unresolvable from
+any other clone, and dead the moment the branch is rebased or squashed. **Whoever merges
+`iv-356-per-project-config-parity` to `main` must re-record this row at the resulting `main` sha
+before publishing again** — the obligation carries forward from `b461811` (IV-375's pin) to
+`1f85211` (IV-381's pin) unchanged; it is a property of the branch, not of whichever commit
+happens to be pinned when a reader looks. Until the merge, treat this pin as provisional.
 
-`b461811` is IV-375's fix for this skill's stale per-project config filenames (two commits: the
-corrected filenames/command reference, then a follow-up wording fix) — no `graph_mcp/` edit in
-either. It was **not** re-verified against the running container the way `6dc3999` was; instead,
-against IADC-Core's own deploy log: `.scratch/arch-round3-split/results/27-deploy-5195a74.log`
-records a successful graph-image deploy (`DEPLOY_EXIT=0`, `graph /health` responding) at `5195a74`,
-dated 2026-08-03 — after `6dc3999`'s 2026-07-31 verification and an ancestor of `b461811`.
-`git log 5195a74..b461811 -- graph_mcp/ api/ evaluator/ graph/ graph_view/ graphify_adapter/
+`1f85211` is IV-381's fix for this skill's own violation of the epic's rule that a plugin may read
+only config it writes itself: `SKILL.md` named `docs/agents/advisor.md` — a file only Advisor
+writes — as the per-project config source, and fell back to the Appian MCP to resolve an
+application UUID when no such file existed, the exact server IV-364 removed from Tester-only
+installs. One commit, no `graph_mcp/` edit. Verified the same way `b461811` was: against
+IADC-Core's own deploy log, `.scratch/arch-round3-split/results/27-deploy-5195a74.log` records a
+successful graph-image deploy (`DEPLOY_EXIT=0`, `graph /health` responding) at `5195a74`, dated
+2026-08-03, still the newest graph-deploy log and still an ancestor of `1f85211`.
+`git log 5195a74..1f85211 -- graph_mcp/ api/ evaluator/ graph/ graph_view/ graphify_adapter/
 reader/ resolver/ sail/ vendor/graphify/graphify/ .claude/skills/iadc-graph/` in IADC-Core — the
-full filter derived in the ordering rule below, not just `graph_mcp/` — returns only IV-375's two
-commits (the same result the narrower filter this entry used to cite gave), so nothing this refresh
-carries documents behaviour beyond what `5195a74` actually built and deployed.
+full filter derived in the ordering rule below, not just `graph_mcp/` — returns three commits:
+`5ef7e16`/`b461811` (IV-375, already read and cleared by this entry's prior revision) plus
+`1f85211` itself (IV-381) — a `SKILL.md`-only prose change that removes an instruction rather than
+adding one, touches no `graph_mcp/` path, and promises no tool or behaviour the deployed server
+doesn't already have. So nothing this refresh carries documents behaviour beyond what `5195a74`
+actually built and deployed.
 
 That "nothing beyond" claim covers more than IV-375's own two lines, because a refresh is a
 wholesale directory copy, not a cherry-pick, so it also carries forward what `6dc3999`'s mirroring
