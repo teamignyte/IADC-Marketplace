@@ -47,10 +47,9 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
   - **Present** → before calling this "working," check `git ls-files --error-unmatch .mcp.json`
     (repo root) — a connection succeeding is not the same question as a credential being safe:
     - **Untracked** → not being in the index only means nothing has staged it — it says nothing about
-      whether the next broad `git add -A` would leave it alone, and this branch has never asked that
-      before reporting success. Settle it with the same two checks step 4 runs right before it writes
-      anything — a credential already sitting in the file deserves the same durable protection as one
-      about to be written, and neither check alone is sufficient:
+      whether the next broad `git add -A` would leave it alone. Settle it with the same three checks
+      step 4 runs right before it writes anything — a credential already sitting in the file deserves
+      the same durable protection as one about to be written, and neither check alone is sufficient:
       - `git check-ignore .mcp.json` **fails** → nothing in `.gitignore` reaches this file yet. Say
         the entry works, but say just as plainly that this repo does not protect it, and name the fix
         outright:
@@ -67,8 +66,18 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
         second check exists applies here unchanged: this is exactly as revertible as the untracked
         `.mcp.json` is re-addable. Say the entry works, and that the ignore rule needs one more commit
         before it's durable. **Report this and stop, same as above** — no commit, no asking.
-      - **Both succeed** → genuinely working **and** protected. Say so — name the `url`, redact the
-        key — and stop. Nothing else in this skill needs to run.
+      - `git check-ignore .mcp.json` succeeds and the durability check above exits 0, but
+        `git cat-file -e HEAD:.mcp.json` also succeeds → the ignore rule is real and durable, but HEAD
+        still carries a committed blob at this path — the state a prior run of this same skill that got
+        interrupted between untracking and committing leaves behind (step 4's third gate below exists
+        for exactly this). The key is still readable from this repo's history, and a plain `git reset`
+        would put the file straight back in the index with nothing in `.gitignore` reaching it. Say the
+        entry works, but say just as plainly that this repo does not protect it, and name the fix
+        outright: the removal from the index is already staged and only needs committing — show `git
+        status` and offer to commit it now, the same way step 4's own third gate does.
+        **Report this and stop, same as above** — no commit, no asking.
+      - **All three succeed** → genuinely working **and** protected. Say so — name the `url`, redact
+        the key — and stop. Nothing else in this skill needs to run.
     - **Tracked** → **don't report this as working.** The key is committed into this repo's git
       history, and untracking the file later doesn't erase that — anyone with the repo's history can
       still read the old commit. Say so, then continue to step 2 exactly as the unconfigured case
@@ -78,9 +87,9 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
       asking.
 
 This tool-presence check is the only evidence this skill gathers for "working" — but it settles the
-one question AC 4 needs settled: whether this specific credential is accepted by the graph service,
-not whether every later operation will succeed. Every read tool needs a `session_id`, which only
-exists after `seed()`, so this skill never calls one just to check a connection — and it never
+one question that actually matters here: whether this specific credential is accepted by the graph
+service, not whether every later operation will succeed. Every read tool needs a `session_id`, which
+only exists after `seed()`, so this skill never calls one just to check a connection — and it never
 collects an application to call one against anyway (see the standalone note above). Tool presence is
 enough on its own, though: the graph service gates its entire MCP endpoint behind this exact key
 before any MCP handshake completes, and does so fail-closed — a missing or wrong key can't match by
