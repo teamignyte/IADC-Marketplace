@@ -27,7 +27,7 @@ whichever you install, and disabling it while either is enabled is refused.
 iadc/                              the bundle — a manifest and nothing else
 iadc-graph/skills/iadc-graph/      the mirrored graph skill (SKILL.md + references/)
 iadc-graph/skills/setup/           the hand-written setup skill — writes the iadc MCP entry
-docs/mirrored-iadc-graph-skill.md  where the mirror came from, and how to refresh it
+docs/mirrored-iadc-graph-skill.md  what the mirror is and why it must never be hand-edited
 ```
 
 Only two plugins are *stored* here. `iadc-advisor` and `iadc-tester` are fetched from their own
@@ -50,9 +50,9 @@ deployed server hasn't moved; the default is deploy first, then refresh from the
 A skill that promises a tool the deployed server lacks makes Claude call it and fail.
 
 Never hand-edit `iadc-graph/skills/iadc-graph/`. Fix it upstream in IADC-Core, where a drift-guard
-test binds it to the server's real tool roster per commit, deploy, then refresh. Procedure and
-current sha:
-[`docs/mirrored-iadc-graph-skill.md`](docs/mirrored-iadc-graph-skill.md).
+test binds it to the server's real tool roster per commit, deploy, then refresh. What the mirror is:
+[`docs/mirrored-iadc-graph-skill.md`](docs/mirrored-iadc-graph-skill.md). The refresh procedure and
+current sha are a maintainer concern kept in IADC-Core.
 
 ## Adding a plugin
 
