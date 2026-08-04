@@ -45,7 +45,8 @@ in the [umbrella](https://github.com/teamignyte/IADC) instead, which nobody clon
 
 `iadc-graph/skills/iadc-graph/` is a copy of IADC-Core's canonical skill, taken at the sha that built
 the **deployed** graph image. Refreshing straight from `HEAD` (which can be ahead of what is
-running) is permitted only when a check — documented in the procedure link below — establishes the
+running) is permitted only when a check — documented in the maintainer procedure kept in
+IADC-Core — establishes the
 deployed server hasn't moved; the default is deploy first, then refresh from the sha that built it.
 A skill that promises a tool the deployed server lacks makes Claude call it and fail.
 

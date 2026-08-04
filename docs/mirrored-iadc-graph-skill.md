@@ -2,8 +2,9 @@
 
 `iadc-graph/skills/iadc-graph/` in this repo is a **copy** of the canonical skill authored in
 [IADC-Core](https://github.com/teamignyte/IADC-Core) (`.claude/skills/iadc-graph/`), taken at the
-sha that built the **deployed** graph image. It carries **zero local patches** — verified
-byte-identical (`diff -r`) against the upstream sha before every publish, so any difference from
+sha that built the **deployed** graph image — or, when the maintainer procedure's check establishes
+the deployed server hasn't moved, at `HEAD` directly. It carries **zero local patches** — verified
+byte-identical (`diff -r`) against the upstream sha at each refresh, so any difference from
 upstream here is staleness, never a deliberate change. The enclosing `iadc-graph/` plugin directory
 additionally holds `.claude-plugin/plugin.json`, which makes it installable.
 
@@ -22,5 +23,5 @@ review-tool source. See the family's
 [ADR 0003](https://github.com/teamignyte/IADC/blob/main/docs/adr/0003-shared-skills-ship-as-pinned-marketplace-plugins.md).
 
 Because the mirror is a **relative-path** plugin source rather than a git source, there is no `sha`
-field in its marketplace entry to pin. The pin is recorded upstream instead, in the maintainer
-procedure linked above.
+field in its marketplace entry to pin. The pin is recorded upstream instead, in IADC-Core's
+maintainer procedure.
