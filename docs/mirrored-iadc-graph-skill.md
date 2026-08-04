@@ -9,23 +9,23 @@ installable.
 | | |
 |---|---|
 | **Upstream** | `teamignyte/IADC-Core`, path `.claude/skills/iadc-graph/` — *ours*, not a third party |
-| **Mirrored at** | `6dc3999` (IADC-Core `main`) — taken 2026-08-03 |
+| **Mirrored at** | `5ef7e16` (IADC-Core `iv-356-per-project-config-parity`, not yet on `main`) — taken 2026-08-04 |
 | **Contents** | `iadc-graph/skills/iadc-graph/` holds 7 `.md` files: `SKILL.md` + 6 under `references/` |
 | **Local patches** | **none in `iadc-graph/skills/iadc-graph/`.** Any difference from upstream there is staleness — take upstream |
 
-`6dc3999` was **verified against the running container**, not assumed. The host has no git, so it
-was proven by content on 2026-07-31: in-container md5sums of `/app/graph_mcp/__main__.py`
-(`98583ce9…`) and `/app/graph_mcp/service.py` (`dd2929ee…`) matched `git show 6dc3999:` for both
-(recorded in IADC-Advisor commit `8069b17`). Reuse that method — comparing file content — whenever
-the deployed sha needs establishing.
+`5ef7e16` is IV-375's fix for this skill's stale per-project config filenames — a prose-only
+change, no `graph_mcp/` edit. It was **not** re-verified against the running container the way
+`6dc3999` was; instead, against IADC-Core's own deploy log. `.scratch/arch-round3-split/results/
+27-deploy-5195a74.log` records a successful graph-image deploy (`DEPLOY_EXIT=0`, `graph /health`
+responding) at `5195a74`, dated 2026-08-03 — after `6dc3999`'s 2026-07-31 verification and an
+ancestor of `5ef7e16`. `git log 5195a74..5ef7e16 -- graph_mcp/ .claude/skills/iadc-graph/` in
+IADC-Core returns only IV-375's own commit, so this refresh — the four files' prose refinement
+`6dc3999`'s mirroring had already found and left lagging as the harmless direction, plus IV-375's
+two-line fix on top — documents nothing beyond what `5195a74` actually built and deployed.
 
-The one residual: **a graph image deployed after 2026-07-31 would leave this mirror lagging**, which
-the ordering rule below permits and which is the harmless direction. Re-verify by the same method
-before a release that matters.
-
-For context on what the lag currently costs: at the time of mirroring, IADC-Core `HEAD` was ahead by
-four of the seven files, but documented **the same 18 tools**. The difference is prose refinement, not
-a missing tool — which is precisely the failure the ordering rule guards against.
+**The residual is unchanged going forward:** a graph image deployed after `5195a74` would leave
+this mirror lagging again, which the ordering rule below permits. Re-verify by content (the
+`6dc3999` method) or by deploy log (this refresh's method) before a release that matters.
 
 ---
 

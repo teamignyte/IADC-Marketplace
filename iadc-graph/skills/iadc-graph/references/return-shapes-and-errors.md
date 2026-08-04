@@ -3,14 +3,15 @@
 Canonical source: `graph_mcp/tools.py` (the shapes) and `graph_mcp/__main__.py`
 (the JSON-string wrapping + session error dicts). `tests/test_graph_mcp_docs_drift_guard.py`
 guards this file **token-level only**: every wire key `node_label`,
-`occurrence_count`, `total_matching` and every error string `unknown or
-expired session`, `node not found`, `session not ready` must appear
-backtick-wrapped somewhere below, forward-coupled from the code that
-produces them (named error constants; wire keys verified against real
-return values — a sibling check in the same suite also guards the 18-tool
-roster against `SKILL.md`'s own enumeration). It does **not** enforce full
-prose/shape equality — if a shape's structure changes beyond these guarded
-tokens, update this file by hand, same as before.
+`occurrence_count`, `total_matching` and every error string
+`unknown or expired session`, `session does not belong to this caller`,
+`node not found`, `session not ready` must appear backtick-wrapped somewhere
+below, forward-coupled from the code that produces them (named error
+constants; wire keys verified against real return values — a sibling check
+in the same suite also guards the 18-tool roster against `SKILL.md`'s own
+enumeration). It does **not** enforce full prose/shape equality — if a
+shape's structure changes beyond these guarded tokens, update this file by
+hand, same as before.
 
 **Every one of the 18 tools returns a JSON string**, not a raw object —
 `mcp.tool()` functions all end in `json.dumps(...)`. Parse the string before
@@ -18,9 +19,18 @@ reading any field. Everything below describes the shape *after* you
 `json.loads()` it.
 
 **Errors are dicts, never raised exceptions across the MCP boundary** — with
-exactly one exception: an invalid `direction` (`get_neighbors`/`reachable`) is
-a real `ValueError`, not caught. Check for `direction in ("in", "out")` on
-your side before calling, or be ready to catch it.
+two exceptions, both real `ValueError`s that surface as an MCP-level tool
+error (`mcp.server.fastmcp.exceptions.ToolError`, message = the exception
+text), not the `{"error": ...}` JSON shape everything else here uses:
+
+- An invalid `direction` (`get_neighbors`/`reachable`). Check for
+  `direction in ("in", "out")` on your side before calling, or be ready to
+  catch it.
+- `seed(export_ref=...)`'s own validation (`graph_mcp/session.py::seed_export`,
+  pre-existing) — the path doesn't resolve to an existing directory, or
+  (IV-321, HTTP callers only) doesn't resolve under one of this server's
+  allowed export roots. See `references/session-lifecycle.md`'s
+  `export_ref` section for what those roots are.
 
 ## The compact enriched record
 
@@ -38,6 +48,9 @@ edge record (built by `enrich_node`):
 - `object_type` is present **only** on `kind == "artifact"` nodes — omitted
   entirely on every other kind (never sent as `null`). Check for the key's
   presence, don't assume it's always there.
+- `kind` can be `null` (IV-250, defensive fallback — not expected to occur
+  in practice) for a node whose attribute dict is unexpectedly empty.
+  `node_label` still renders in that case, falling back to the raw node id.
 - Lists of these records are sorted by `(node_label, id)` (ties broken by id)
   — `get_neighbors`, `callers_of`, `shortest_path`, `list_nodes`, `find_nodes`,
   `reachable`.
@@ -193,7 +206,9 @@ read-only lookup for that text:
   `recordField`/`recordAction`/`recordRelationship`/`recordFieldDisplayName`)
   — kinds that structurally never carry a SAIL body — plus an artifact or
   recordView owner missing from the session's extracted artifacts (e.g. a
-  synthesized node with no corresponding Reader-extracted `Artifact`):
+  synthesized node with no corresponding Reader-extracted `Artifact`), or a
+  node with no `kind` attribute at all (IV-250, defensive fallback — not
+  expected to occur in practice):
 
 ```json
 {"node_id": "<node_id>", "node_label": "<str>", "sail": [], "reason": "..."}
@@ -258,7 +273,7 @@ them off the compact edge record you drilled in from.
 Every read tool (`get_neighbors`, `get_node`, `callers_of`, `shortest_path`,
 `get_out_edges`, `get_in_edges`, `get_edge`, `edges_by_relation`, `list_nodes`,
 `find_nodes`, `graph_overview`, `reachable`, `report_changes`, `record_model`,
-`get_sail`) funnels through the same `_resolve_or_error` check first and returns one of
+`get_sail`) funnels through the same session-resolution check first and returns one of
 these three dicts verbatim on failure — check for `"error"` in the parsed
 JSON before assuming you got a real result shape:
 
@@ -408,11 +423,11 @@ or a bare list:
   failure, an object_type the patcher can't handle); `detail` is `str(exc)`.
 
 If the session itself doesn't resolve, you get one of the standard session
-dicts — `unknown or expired session` / `session does not belong to this
-caller` / `session not ready` (see "Session-resolution errors" above) — at
-the top level instead of a `results` envelope, same as every other read
-tool: `report_changes` funnels through the same `_resolve_or_error` check,
-so all three apply, not just the first two.
+dicts — `unknown or expired session` / `session does not belong to this caller`
+/ `session not ready` (see "Session-resolution errors" above) — at the top
+level instead of a `results` envelope, same as every other read tool:
+`report_changes` funnels through the same session-resolution check, so all
+three apply, not just the first two.
 
 One more top-level (non-`results`) error unique to this tool, when no
 `ObjectFetcher` was injected and the LCP env vars aren't all set:

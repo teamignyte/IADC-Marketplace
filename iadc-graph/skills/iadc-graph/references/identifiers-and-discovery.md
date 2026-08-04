@@ -19,12 +19,12 @@ list):
 | `recordView` / view-backed `recordField` | `f"{rt_uuid}/{stub}"` composite — synthesized, Appian assigns no id here | `a1b2c3d4-.../myUrlStub` |
 | Boundary nodes (`external`/`dangling`/`unknown`) | Priority-ordered: uuid, then name, then raw ref text | Varies — could be a UUID, an `appian:{name}` form, or literal malformed ref text |
 
-Full priority rules for boundary nodes (`_boundary_node_id` in the resolver):
-`dangling` always has a uuid; `unknown` is `appian:{name}` if a name was
-recovered, else the raw ref text; `external` tries uuid, then name, then raw
-ref text, in that order. You don't need to compute any of this yourself —
-it's context for why boundary-node ids look inconsistent, not a formula to
-apply.
+Full priority rules for boundary nodes (`ResolvedReference.boundary_node_id()`
+in the resolver): `dangling` always has a uuid; `unknown` is `appian:{name}`
+if a name was recovered, else the raw ref text; `external` tries uuid, then
+name, then raw ref text, in that order. You don't need to compute any of
+this yourself — it's context for why boundary-node ids look inconsistent,
+not a formula to apply.
 
 **The takeaway:** never assume a `node_id` is a UUID and never pattern-match
 on its shape to decide what to do with it. Treat every `id` as an opaque

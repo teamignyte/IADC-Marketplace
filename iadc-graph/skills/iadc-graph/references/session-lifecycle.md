@@ -19,11 +19,25 @@ application_uuid"}` — no partial/best-guess behavior.
 
 A path to an **already-extracted Appian export directory on the MCP
 server's own filesystem**. Only usable by a caller co-located with the
-server — e.g. the review agent running on the IADC host, which already has
-export directories sitting on disk from a prior extraction. If you're a
-remote client (a dev agent talking to the hosted MCP over HTTP), you almost
-certainly do not have a path on the server's disk to hand it — use
-`application_uuid` instead.
+server. If you're a remote client (a dev agent talking to the hosted MCP
+over HTTP), you almost certainly do not have a path on the server's disk to
+hand it — use `application_uuid` instead.
+
+**Over HTTP, the path is also restricted (IV-321).** A caller reaching this
+tool through the Graph service's HTTP transport (i.e. anyone other than a
+local `python -m graph_mcp` stdio process) must pass a path that resolves
+under one of two directories on the server: the Graph service's own data
+directory, or its read-only export-staging mount — the documented,
+operator-populated home for this exact front door (`docs/environments.md`
+surface A; `GRAPH_EXPORTS_DIR`, default `/data/graph-exports` inside the
+container, bind-mounted from `~/iadc/graph-exports` on the host). An
+operator stages an export there (`~/iadc/graph-exports/<name>/`) before you
+call this tool with the **container-side** path,
+`export_ref="/data/graph-exports/<name>"` — the host-side path is not
+something the MCP process can see. Any other path is rejected with an error
+naming no roots (a stdio process invoking `python -m graph_mcp
+--export-root <path>` directly is exempt from this restriction — it already
+has whatever filesystem access it has).
 
 Builds and registers the session **synchronously**: the call blocks until
 the resolver→builder pipeline finishes, and the response state is always
@@ -95,15 +109,16 @@ An `export_ref` session's `seed_status` will just immediately confirm
 
 ## TTL and eviction
 
-Sessions are evicted **lazily** on idle timeout, not by a background
-sweeper: `DEFAULT_SESSION_TTL_SECONDS = 1800` (30 minutes) since
-`last_accessed`. Every read/seed call refreshes `last_accessed`, so a
-session under active use never expires; one left idle for 30+ minutes gets
-swept the next time *anything* touches the registry (not necessarily your
-own next call). Once evicted, the `session_id` behaves exactly like one
-that was never issued — same `"unknown or expired session"` error as a
-typo'd id. There is no way to "extend" or "keep alive" a session other than
-using it.
+Sessions are evicted **lazily** on idle timeout: `DEFAULT_SESSION_TTL_SECONDS = 1800`
+(30 minutes) since `last_accessed`. Every read/seed call refreshes
+`last_accessed`, so a session under active use never expires; one left idle
+for 30+ minutes gets swept the next time *anything* touches the registry
+(not necessarily your own next call) — the deployed service additionally
+runs a periodic background sweep (IV-298), so a session can also be
+reclaimed with no traffic at all. Either way, once evicted, the
+`session_id` behaves exactly like one that was never issued — same
+`"unknown or expired session"` error as a typo'd id. There is no way to
+"extend" or "keep alive" a session other than using it.
 
 Practical implication: don't seed once at the start of a long task and sit
 on the session_id for a long time before your first read — if more than 30

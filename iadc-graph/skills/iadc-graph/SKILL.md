@@ -57,9 +57,9 @@ look it up via the Appian MCP (`listApplications`/`getApplication`) directly.
 The Project configuration is the IADC repo's own `CLAUDE.md` (see its Appian
 section) when seeding the IADC application itself. For a client project,
 it's whatever file plays that role there — e.g. one injected at session
-start from `docs/agents/project.md`, written by a `/setup`-style command,
-with any `docs/agents/project.local.md` personal overrides applied on top
-(IADC-Advisor ADR 0010) — covering whatever application that project
+start from `docs/agents/advisor.md`, written by that project's own setup
+skill, with any `docs/agents/advisor.local.md` personal overrides applied on
+top (IADC-Advisor ADR 0010) — covering whatever application that project
 targets.
 
 Map a developer-given nickname to the UUID through whatever alias the
@@ -78,7 +78,11 @@ the application to seed.)
    UUID is already on record (see Getting the seed target above) before
    resolving it live.
    - `seed(export_ref="<path>")` — server-local already-extracted export
-     directory. Synchronous; returns `state: "ready"` immediately.
+     directory. Synchronous; returns `state: "ready"` immediately. Over
+     HTTP (not local stdio), the path must resolve under the server's Graph
+     Snapshot data directory or its export-staging mount — see
+     `references/session-lifecycle.md`'s `export_ref` section for the two
+     allowed roots and why.
    - `seed(application_uuid="<uuid>")` — live Appian application UUID.
      Asynchronous; returns `state: "queued"` immediately, before the build
      finishes.
