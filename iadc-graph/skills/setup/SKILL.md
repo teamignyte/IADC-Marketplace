@@ -49,7 +49,7 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
     - **Untracked** → not being in the index only means nothing has staged it — it says nothing about
       whether the next broad `git add -A` would leave it alone. Settle it with the same three checks
       step 4 runs right before it writes anything — a credential already sitting in the file deserves
-      the same durable protection as one about to be written, and neither check alone is sufficient:
+      the same durable protection as one about to be written, and none alone is sufficient:
       - `git check-ignore .mcp.json` **fails** → nothing in `.gitignore` reaches this file yet. Say
         the entry works, but say just as plainly that this repo does not protect it, and name the fix
         outright:
@@ -73,11 +73,11 @@ explicitly when it's actually time to write). Look at the `iadc` entry, if there
         for exactly this). The key is still readable from this repo's history, and a plain `git reset`
         would put the file straight back in the index with nothing in `.gitignore` reaching it. Say the
         entry works, but say just as plainly that this repo does not protect it, and name the fix
-        outright: the removal from the index is already staged and only needs committing — show `git
-        status` and offer to commit it now, the same way step 4's own third gate does.
+        outright: the removal from the index is already staged — it only needs one more commit to
+        become durable, the same commit step 4's own third gate also requires.
         **Report this and stop, same as above** — no commit, no asking.
-      - **All three succeed** → genuinely working **and** protected. Say so — name the `url`, redact
-        the key — and stop. Nothing else in this skill needs to run.
+      - **All three gates pass** → genuinely working **and** protected. Say so — name the `url`,
+        redact the key — and stop. Nothing else in this skill needs to run.
     - **Tracked** → **don't report this as working.** The key is committed into this repo's git
       history, and untracking the file later doesn't erase that — anyone with the repo's history can
       still read the old commit. Say so, then continue to step 2 exactly as the unconfigured case
