@@ -12,7 +12,7 @@ That installs the whole suite. Install a single product instead if that's all yo
 
 | Plugin | What you get |
 |---|---|
-| **`iadc`** | Everything — no skills of its own; it exists only to pull in the two below |
+| **`iadc`** | Everything — no skills of its own; it exists only to pull in `iadc-advisor` and `iadc-tester` (which bring `iadc-graph` with them) |
 | **`iadc-advisor`** | Advisory Appian architect: pressure-test tickets, produce build specs. Plans; never builds |
 | **`iadc-tester`** | Sync an Appian app's Selenium test suite with a Jira ticket's requirements |
 | **`iadc-graph`** | Query the App Graph. **Installed automatically** — you never install it directly |
@@ -25,12 +25,11 @@ whichever you install, and disabling it while either is enabled is refused.
 ```
 .claude-plugin/marketplace.json    the catalog
 iadc/                              the bundle — a manifest and nothing else
-iadc-graph/                        the mirrored graph skill (SKILL.md + references/)
-docs/mirrored-iadc-graph-skill.md  where the mirror came from, and how to refresh it
+docs/mirrored-iadc-graph-skill.md  where the iadc-graph skill mirror moved, and why
 ```
 
-Only two plugins are *stored* here. `iadc-advisor` and `iadc-tester` are fetched from their own
-repositories — the catalog just points at them.
+Only `iadc` is *stored* here — a manifest and nothing else. `iadc-advisor`, `iadc-tester` and
+`iadc-graph` are all fetched from their own repositories — the catalog just points at them.
 
 No entry is pinned: each tracks its repo's default branch. Pin with `ref` or `sha` only for a
 deliberate reason, and say what it is — an unexplained pin outlives the problem it solved.
@@ -39,16 +38,6 @@ deliberate reason, and say what it is — an unexplained pin outlives the proble
 installs anything can read everything here. Family decisions and internal tooling deliberately live
 in the [umbrella](https://github.com/teamignyte/IADC) instead, which nobody clones
 ([ADR 0001](https://github.com/teamignyte/IADC/blob/main/docs/adr/0001-iadc-family-is-five-repos-in-two-tiers.md)).
-
-## The graph mirror
-
-`iadc-graph/` is a copy of IADC-Core's canonical skill, taken at the sha that built the **deployed**
-graph image — never at `HEAD`, which can be ahead of what is running. A skill that promises a tool
-the deployed server lacks makes Claude call it and fail.
-
-Never hand-edit it. Fix it upstream in IADC-Core, where a drift-guard test binds it to the server's
-real tool roster per commit, deploy, then refresh. Procedure and current sha:
-[`docs/mirrored-iadc-graph-skill.md`](docs/mirrored-iadc-graph-skill.md).
 
 ## Adding a plugin
 

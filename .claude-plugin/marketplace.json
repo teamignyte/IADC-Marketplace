@@ -27,7 +27,10 @@
     },
     {
       "name": "iadc-graph",
-      "source": "./iadc-graph",
+      "source": {
+        "source": "github",
+        "repo": "teamignyte/IADC-Graph-Plugin"
+      },
       "description": "Query an Appian application's App Graph over the IADC graph MCP. Installed automatically as a dependency of the advisor and the tester."
     }
   ]

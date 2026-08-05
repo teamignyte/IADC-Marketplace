@@ -1,0 +1,3 @@
+# Git worktrees for concurrent work live under the repo. They are never
+# tracked — each is a checkout of this same repo.
+.worktrees/
