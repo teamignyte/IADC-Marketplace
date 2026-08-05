@@ -12,7 +12,7 @@ That installs the whole suite. Install a single product instead if that's all yo
 
 | Plugin | What you get |
 |---|---|
-| **`iadc`** | Everything — no skills of its own; it exists only to pull in the two below |
+| **`iadc`** | Everything — no skills of its own; it exists only to pull in `iadc-advisor` and `iadc-tester` (which bring `iadc-graph` with them) |
 | **`iadc-advisor`** | Advisory Appian architect: pressure-test tickets, produce build specs. Plans; never builds |
 | **`iadc-tester`** | Sync an Appian app's Selenium test suite with a Jira ticket's requirements |
 | **`iadc-graph`** | Query the App Graph. **Installed automatically** — you never install it directly |
