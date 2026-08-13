@@ -15,7 +15,7 @@
         "url": "https://github.com/teamignyte/IADC-Advisor.git",
         "path": "iadc-advisor"
       },
-      "description": "Advisory Appian architect: pressure-test tickets against the live app, produce build specs, answer how-does-our-app-work — advise and plan, never build."
+      "description": "Advisory Appian architect: pressure-test tickets against the iadc graph, produce build specs, answer how-does-our-app-work — advise and plan, never build."
     },
     {
       "name": "iadc-tester",
